@@ -18,6 +18,34 @@ alongside its `.ino` file in the same folder.
 - **Board:** Arduino Uno R4 Minima
 - **Core:** [Arduino UNO R4 Boards](https://github.com/arduino/ArduinoCore-renesas)
 
+## Sketches
+
+- `basic_serial` — prints an incrementing "count X" over serial every 2 seconds.
+- `nrf24_receiver` — listens for packets on an nRF24L01 module and prints each
+  payload received.
+- `nrf24_transmitter` — sends a "count X" packet over an nRF24L01 module every
+  3 seconds.
+
+### nRF24L01 wiring
+
+| nRF24L01 pin | Arduino Uno R4 Minima pin |
+| ------------ | ------------------------- |
+| VCC          | 3V3 (**not** 5V)          |
+| GND          | GND                       |
+| CE           | D9                        |
+| CSN          | D10                       |
+| SCK          | D13                       |
+| MOSI         | D11                       |
+| MISO         | D12                       |
+| IRQ          | not connected             |
+
+The module runs on 3.3V logic/power only — connecting VCC to 5V can damage it.
+A decoupling capacitor (e.g. 10uF) across VCC/GND right at the module is
+recommended, since the module is sensitive to power supply noise.
+
+Requires the **RF24** library by TMRh20, installable via the Arduino IDE
+Library Manager.
+
 ## Getting started
 
 1. Install the Arduino IDE (2.x recommended).

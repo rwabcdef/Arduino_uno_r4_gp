@@ -23,7 +23,8 @@ ROOT_SKETCH_NAME = f"{ROOT_DIR.name}.ino"
 
 # Select the sketch to copy by leaving exactly one line uncommented below.
 SKETCH_NAME = "basic_serial"
-# SKETCH_NAME = "another_sketch"
+# SKETCH_NAME = "nrf24_receiver"
+# SKETCH_NAME = "nrf24_transmitter"
 
 
 def copy_sketch(sketch_name: str) -> Path:
