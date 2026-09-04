@@ -1,0 +1,22 @@
+# Arduino IDE build artifacts
+build/
+*.hex
+*.elf
+*.bin
+*.map
+
+# Arduino CLI / IDE 2.x cache & config
+.vscode/
+.pio/
+.cache/
+sketch.yaml.bak
+
+# OS cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor swap/backup files
+*.swp
+*.swo
+*~
