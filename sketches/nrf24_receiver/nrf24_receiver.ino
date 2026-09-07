@@ -29,6 +29,11 @@ RF24 radio(CE_PIN, CSN_PIN);
 
 void setup() {
   Serial.begin(115200);
+  while (!Serial) {
+    // wait for native USB serial to connect
+  }
+
+  Serial.println("start");
 
   if (!radio.begin()) {
     Serial.println("nRF24L01 not found");
@@ -40,6 +45,8 @@ void setup() {
   radio.setPALevel(RF24_PA_LOW);
   radio.openReadingPipe(0, RADIO_ADDRESS);
   radio.startListening();
+
+  Serial.println("nRF24L01 in Rx");
 }
 
 void loop() {
