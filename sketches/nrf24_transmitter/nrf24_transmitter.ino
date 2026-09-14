@@ -35,6 +35,12 @@ unsigned int count = 0;
 void setup() {
   Serial.begin(115200);
 
+  while (!Serial) {
+    // wait for native USB serial to connect
+  }
+
+  Serial.println("start");
+
   if (!radio.begin()) {
     Serial.println("nRF24L01 not found");
     while (true) {
@@ -45,6 +51,8 @@ void setup() {
   radio.setPALevel(RF24_PA_LOW);
   radio.openWritingPipe(RADIO_ADDRESS);
   radio.stopListening();
+
+  Serial.println("nRF24L01 in Tx");
 }
 
 void loop() {
