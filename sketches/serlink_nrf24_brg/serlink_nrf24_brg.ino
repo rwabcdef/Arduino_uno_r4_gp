@@ -144,6 +144,7 @@ void loop() {
   // received data is not used here.
   debugSocket.getRxData(socketRxData, &socketRxDataLen); // DBG01T156003RPB
 
+  // ledSocket traffic is forwarded to the radio, so the received data is not used here.
   if (ledSocket.getRxData(socketRxData, &socketRxDataLen)) { // LED01U492002A1
     // socketRxData only holds the frame's data ("A1"), but Radio::write()
     // needs a whole '\n' terminated frame, so re-serialise the received frame.
