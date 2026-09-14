@@ -1,7 +1,7 @@
 // nrf24_receiver
 //
-// Listens for packets on an nRF24L01 module and prints each received
-// payload over serial. Does not transmit.
+// Listens for SerLink frames on an nRF24L01 module (using the Radio class)
+// and prints each received frame over serial. Does not transmit.
 //
 // Wiring (nRF24L01 -> Arduino Uno R4 Minima):
 //   VCC  -> 3V3   (NOT 5V -- a decoupling cap, e.g. 10uF, across VCC/GND
@@ -16,16 +16,18 @@
 //   IRQ  -> not connected
 //
 // Requires the "RF24" library by TMRh20 (Library Manager).
+// Run synclib.py first to copy the modules from lib/ into this folder.
 // Must use the same RADIO_ADDRESS as the transmitter.
 
-#include <SPI.h>
-#include <RF24.h>
+#include "Radio.hpp"
 
 const uint8_t CE_PIN = 9;
 const uint8_t CSN_PIN = 10;
 const byte RADIO_ADDRESS[6] = "00001";
 
-RF24 radio(CE_PIN, CSN_PIN);
+Radio radio(CE_PIN, CSN_PIN);
+
+char rxFrame[RADIO__FRAME_LEN_MAX];
 
 void setup() {
   Serial.begin(115200);
@@ -35,24 +37,16 @@ void setup() {
 
   Serial.println("start");
 
-  if (!radio.begin()) {
-    Serial.println("nRF24L01 not found");
-    while (true) {
-      // halt
-    }
-  }
-
-  radio.setPALevel(RF24_PA_LOW);
-  radio.openReadingPipe(0, RADIO_ADDRESS);
+  // The module is brought up by radio.run(), retrying until it answers.
+  radio.init(RADIO_ADDRESS);
   radio.startListening();
-
-  Serial.println("nRF24L01 in Rx");
 }
 
 void loop() {
-  if (radio.available()) {
-    char payload[32] = {0};
-    radio.read(&payload, sizeof(payload));
-    Serial.println(payload);
+  radio.run();
+
+  uint8_t len;
+  if (radio.hasRxData(rxFrame, &len)) {
+    Serial.print(rxFrame); // frame already ends in '\n'
   }
 }
