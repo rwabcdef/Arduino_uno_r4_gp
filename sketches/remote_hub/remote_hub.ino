@@ -269,10 +269,13 @@ void handleLedData(char* data, uint16_t dataLen)
     return; // too short for id + action
   }
 
-  if (ledEvent.deSerialise(data) &&
-      (ledEvent.getId() == statusLed.getId()) &&
-      (ledEvent.getType() == HardMod::Std::LedEvent::On)) {
-    statusLed.on();
+  if (ledEvent.deSerialise(data) && (ledEvent.getId() == statusLed.getId()){
+
+    if (ledEvent.getType() == HardMod::Std::LedEvent::On) {
+      statusLed.on();
+    } else if (ledEvent.getType() == HardMod::Std::LedEvent::Off) {
+      statusLed.off();
+    }
   }
 }
 //-----------------------------------------------------------------------------------------------
