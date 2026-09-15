@@ -31,6 +31,8 @@
 // Status LED (statusLed):
 //   D8 -> resistor (e.g. 330R) -> LED anode, LED cathode -> GND
 //   (the built-in LED is on D13, which is the radio's SPI SCK, so can't be used)
+//   Set on when LED01 data (from ledSocket or ledRadioSocket) is "A1", i.e.
+//   led protocol (see Led.hpp): id 'A' (statusLed), action '1' (LEDEVENT__ON).
 //
 //----------------------------------------------------------------
 // Led socket (LED01): receives a frame from the uart, and forwards its data
@@ -72,6 +74,7 @@ const byte RADIO_ADDRESS[6] = "00001";
 #define MAX_DATA_LEN (UART_BUFF_LEN - SerLink::Frame::LEN_HEADER - 1)
 
 bool debugSockInstantHandler(SerLink::Frame &rxFrame, uint16_t* dataLen, char* data);
+void handleLedData(char* data, uint16_t dataLen);
 
 //-------------------------------------------------
 // reader0 & writer0
@@ -134,7 +137,8 @@ Radio radio(CE_PIN, CSN_PIN);
 SerLinkRadioAdapter serLinkRadioAdapter(&radio);
 //-------------------------------------------------
 // status led: D8 (Uno R3 port B, pin 0)
-HardMod::Std::Led statusLed('1', GPIO_REG__PORTB, 0);
+HardMod::Std::Led statusLed('A', GPIO_REG__PORTB, 0);
+HardMod::Std::LedEvent ledEvent; // decodes received LED01 data
 //-------------------------------------------------
 // reader1 & writer1 (over the radio)
 
@@ -203,7 +207,8 @@ void loop() {
 
   // Serial to radio forwarding: ledSocket's received data ("A1") is sent by ledRadioSocket.
   if (ledSocket.getRxData(socketRxData, &socketRxDataLen)) { // LED01U492002A1
-    ledRadioSocket.sendData(socketRxData, socketRxDataLen, false);
+    handleLedData(socketRxData, socketRxDataLen);
+    //ledRadioSocket.sendData(socketRxData, socketRxDataLen, false);
   }
 
   // Radio to serial forwarding: ledRadioSocket's received data is sent by ledSocket.
@@ -211,7 +216,8 @@ void loop() {
     if (socketRxDataLen > MAX_DATA_LEN) {
       socketRxDataLen = MAX_DATA_LEN;
     }
-    ledSocket.sendData(socketRxData, socketRxDataLen, false);
+    handleLedData(socketRxData, socketRxDataLen);
+    //ledSocket.sendData(socketRxData, socketRxDataLen, false);
   }
 
   // Drop received frames that no socket has claimed (e.g. unknown protocol)
@@ -253,5 +259,20 @@ bool debugSockInstantHandler(SerLink::Frame &rxFrame, uint16_t* dataLen, char* d
     }
   }
   return false;
+}
+//-----------------------------------------------------------------------------------------------
+// Decodes LED01 data using the led protocol (see Led.hpp), and sets statusLed on
+// if the data is an On event for it, i.e. "A1": id 'A', action '1' (LEDEVENT__ON).
+void handleLedData(char* data, uint16_t dataLen)
+{
+  if (dataLen < 2) {
+    return; // too short for id + action
+  }
+
+  if (ledEvent.deSerialise(data) &&
+      (ledEvent.getId() == statusLed.getId()) &&
+      (ledEvent.getType() == HardMod::Std::LedEvent::On)) {
+    statusLed.on();
+  }
 }
 //-----------------------------------------------------------------------------------------------
