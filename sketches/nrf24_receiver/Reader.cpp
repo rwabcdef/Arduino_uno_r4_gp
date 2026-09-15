@@ -13,7 +13,6 @@
 #include <avr/io.h>
 #include "wiring_private.h"
 #endif
-#include "uart.h"
 #include "swTimer.h"
 #include <string.h>
 #include <stdio.h>
@@ -26,8 +25,8 @@
 using namespace SerLink;
 
 
-Reader::Reader(uint8_t id, char* rxBuffer, char* ackBuffer, uint8_t bufferLen,
-    Frame* rxFrame, Frame* ackFrame, Writer* writer) : id(id), writer(writer), DebugUser()
+Reader::Reader(uint8_t id, const UartInterface* uart, char* rxBuffer, char* ackBuffer, uint8_t bufferLen,
+    Frame* rxFrame, Frame* ackFrame, Writer* writer) : id(id), uart(uart), writer(writer), DebugUser()
 {
 	//this->id = id;
 	this->rxFlag = false;
@@ -47,27 +46,16 @@ Reader::Reader(uint8_t id, char* rxBuffer, char* ackBuffer, uint8_t bufferLen,
 	  memset(this->handlerRegistrations[i].protocol, 0, Frame::LEN_PROTOCOL);
 	}
 	this->numInstantHandlers = 0;
-
-//#if defined(READER_CONFIG__READER0)
-
-  //if(this->id == READER_CONFIG__READER0_ID)
-  {
-    // Initialise uart hardware & driver layer
-    //uart_init((char*) this->rxBuffer, this->bufferLen);
-  }
-
-//#endif
 }
 
-void Reader::init()
+bool Reader::init()
 {
-#if defined(READER_CONFIG__READER0)
-  if(this->id == READER_CONFIG__READER0_ID)
+  if(this->uart != nullptr && this->uart->init != nullptr)
   {
     // Initialise uart hardware & driver layer
-    uart_init((char*) this->rxBuffer, this->bufferLen);
+    return this->uart->init((char*) this->rxBuffer, this->bufferLen);
   }
-#endif
+  return false;
 }
 
 void Reader::run()
@@ -332,49 +320,33 @@ uint8_t Reader::rxDelay()
 //-------------------------------------------------------------
 bool Reader::checkUartFrameRx()
 {
-#ifdef READER_CONFIG__READER0
-
-	if(this->id == READER_CONFIG__READER0_ID)
+	if(this->uart != nullptr && this->uart->checkFrameRx != nullptr)
 	{
-		return uart_checkFrameRx();
+		return this->uart->checkFrameRx();
 	}
-
-#endif
 	return false;
 }
 uint8_t Reader::getUartRxLenAndReset()
 {
-#ifdef READER_CONFIG__READER0
-
-  if(this->id == READER_CONFIG__READER0_ID)
+  if(this->uart != nullptr && this->uart->getRxLenAndReset != nullptr)
 	{
-		return uart_getRxLenAndReset();
+		return this->uart->getRxLenAndReset();
 	}
-
-#endif
   return 0;
 }
 uint8_t Reader::uartWrite(char* buffer)
 {
-#ifdef READER_CONFIG__READER0
-
-	if(this->id == READER_CONFIG__READER0_ID)
+	if(this->uart != nullptr && this->uart->write != nullptr)
 	{
-		return uart_write(buffer);
+		return this->uart->write(buffer);
 	}
-
-#endif
 	return 0;
 }
 bool Reader::getUartTxBusy()
 {
-#ifdef READER_CONFIG__READER0
-
-	if(this->id == READER_CONFIG__READER0_ID)
+	if(this->uart != nullptr && this->uart->getTxBusy != nullptr)
 	{
-		return uart_getTxBusy();
+		return this->uart->getTxBusy();
 	}
-
-#endif
 	return false;
 }

@@ -19,8 +19,6 @@
 // READER0
 #ifdef READER_CONFIG__READER0
 
-#include "uart_wrapper.hpp"
-
 #define READER_CONFIG__READER0_ID 1 // READER0 instance id
 
 #endif

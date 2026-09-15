@@ -34,6 +34,8 @@
 //
 //----------------------------------------------------------------
 
+#include "uart_wrapper.hpp"
+#include "UartInterface.hpp"
 #include "Frame.hpp"
 #include "Reader.hpp"
 #include "Writer.hpp"
@@ -73,10 +75,19 @@ char readerAckFrameBuffer[FRAME_BUFF_LEN];
 SerLink::Frame readerRxFrame(readerRxFrameBuffer);
 SerLink::Frame readerAckFrame(readerAckFrameBuffer);
 
-SerLink::Writer writer0(WRITER_CONFIG__WRITER0_ID, writerTxBuffer,
+// uart layer used by reader0 & writer0 (see uart.h)
+const SerLink::UartInterface uart0Interface = {
+  uart_init,
+  uart_checkFrameRx,
+  uart_getRxLenAndReset,
+  uart_write,
+  uart_getTxBusy
+};
+
+SerLink::Writer writer0(WRITER_CONFIG__WRITER0_ID, &uart0Interface, writerTxBuffer,
     UART_BUFF_LEN, &writerTxFrame, &writerAckFrame);
 
-SerLink::Reader reader0(READER_CONFIG__READER0_ID, readerRxBuffer, readerAckBuffer,
+SerLink::Reader reader0(READER_CONFIG__READER0_ID, &uart0Interface, readerRxBuffer, readerAckBuffer,
     UART_BUFF_LEN, &readerRxFrame, &readerAckFrame, &writer0);
 
 //-------------------------------------------------

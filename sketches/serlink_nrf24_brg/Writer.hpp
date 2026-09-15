@@ -13,6 +13,7 @@
 #include "StateMachine.hpp"
 #include "Frame.hpp"
 #include "DebugUser.hpp"
+#include "UartInterface.hpp"
 //#include "Transport.hpp"
 #if defined(ENV_CONFIG__SYSTEM_PC)
 #include "DebugPrint.hpp"
@@ -25,6 +26,7 @@ class Writer : public StateMachine, public DebugUser
 {
 private:
   uint8_t id;
+  const UartInterface* uart;
   uint16_t startTick;
   bool txFlag;
   volatile bool ackRxFlag;
@@ -52,7 +54,8 @@ public:
   static const uint8_t STATUS_TIMEOUT = 51;
   static const uint8_t STATUS_PROTOCOL_ERROR = 52;
 
-  Writer(uint8_t id, char* txBuffer, uint8_t bufferLen, Frame* txFrame, Frame* ackRxFrame);
+  // uart: uart layer functions (must outlive the Writer).
+  Writer(uint8_t id, const UartInterface* uart, char* txBuffer, uint8_t bufferLen, Frame* txFrame, Frame* ackRxFrame);
   void run();
 
   // Used to send frame

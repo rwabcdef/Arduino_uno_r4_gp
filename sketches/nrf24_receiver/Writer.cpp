@@ -19,7 +19,7 @@
 
 using namespace SerLink;
 
-Writer::Writer(uint8_t id, char* txBuffer, uint8_t bufferLen, Frame* txFrame, Frame* ackRxFrame): id(id), DebugUser()
+Writer::Writer(uint8_t id, const UartInterface* uart, char* txBuffer, uint8_t bufferLen, Frame* txFrame, Frame* ackRxFrame): id(id), uart(uart), DebugUser()
 {
   this->txFlag = false;
   this->ackRxFlag = false;
@@ -201,25 +201,17 @@ uint8_t Writer::rxAckWait()
 
 uint8_t Writer::uartWrite(char* buffer)
 {
-#ifdef WRITER_CONFIG__WRITER0
-
-  if(this->id == WRITER_CONFIG__WRITER0_ID)
+  if(this->uart != nullptr && this->uart->write != nullptr)
   {
-    return uart_write(buffer);
+    return this->uart->write(buffer);
   }
-
-#endif
   return 0;
 }
 bool Writer::getUartTxBusy()
 {
-#ifdef WRITER_CONFIG__WRITER0
-
-  if(this->id == WRITER_CONFIG__WRITER0_ID)
+  if(this->uart != nullptr && this->uart->getTxBusy != nullptr)
   {
-    return uart_getTxBusy();
+    return this->uart->getTxBusy();
   }
-
-#endif
   return false;
 }

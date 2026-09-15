@@ -13,6 +13,7 @@
 #include "Writer.hpp"
 #include "Frame.hpp"
 #include "DebugUser.hpp"
+#include "UartInterface.hpp"
 //#include "Transport.hpp"
 
 #if defined(ENV_CONFIG__SYSTEM_PC)
@@ -23,19 +24,7 @@ namespace SerLink
 {
 typedef bool (*readHandler)(Frame &rxFrame, uint16_t* dataLen, char* data);
 //typedef void (*readHandler)(const TransportData* pRxData, TransportData* pAckData);
-/*
-typedef void (*reader_uart_init)(char* pRxBuffer, uint8_t rxBufferLen);
-typedef bool (*reader_uart_checkFrameRx)();
-typedef uint8_t (*reader_uart_getRxLenAndReset)();
 
-class ReaderAdapter
-{
-public:
-	reader_uart_init init;
-	reader_uart_checkFrameRx checkFrameRx;
-	reader_uart_getRxLenAndReset getRxLenAndReset;
-};
-*/
 class Reader : public StateMachine, public DebugUser
 {
 private:
@@ -50,6 +39,7 @@ private:
 	//const uint8_t TXACKWAIT = 2;
 	uint8_t id;
 	bool rxFlag;
+	const UartInterface* uart;
 	Writer* writer;
 	char* rxBuffer;
 	char* ackBuffer;
@@ -72,7 +62,7 @@ private:
   uint8_t rxDelay();
 
 	//-------------------------------------
-	// Uart Interface
+	// Uart Interface (calls through this->uart)
 
 	// Checks uart layer (below) to see if a frame has been received.
 	bool checkUartFrameRx();
@@ -89,9 +79,11 @@ private:
 	readHandler getInstantHandler(char* protocol);
 
 public:
-	Reader(uint8_t id, char* rxBuffer, char* ackBuffer, uint8_t bufferLen,
+	// uart: uart layer functions (must outlive the Reader).
+	Reader(uint8_t id, const UartInterface* uart, char* rxBuffer, char* ackBuffer, uint8_t bufferLen,
 	    Frame* rxFrame, Frame* ackFrame, Writer* writer = nullptr); // , DebugPrint* debugPrint = nullptr
-  void init();
+  // Initialises the uart layer. Returns false if the uart could not be opened.
+  bool init();
 	void run();
 	bool registerInstantCallback(char* protocol, readHandler handler);
 	bool getRxFrame(Frame* rxFrame);
