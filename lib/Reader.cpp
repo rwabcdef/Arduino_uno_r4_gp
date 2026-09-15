@@ -25,8 +25,8 @@
 using namespace SerLink;
 
 
-Reader::Reader(uint8_t id, const UartInterface* uart, char* rxBuffer, char* ackBuffer, uint8_t bufferLen,
-    Frame* rxFrame, Frame* ackFrame, Writer* writer) : id(id), uart(uart), writer(writer), DebugUser()
+Reader::Reader(uint8_t id, LinkInterface* link, char* rxBuffer, char* ackBuffer, uint8_t bufferLen,
+    Frame* rxFrame, Frame* ackFrame, Writer* writer) : id(id), link(link), writer(writer), DebugUser()
 {
 	//this->id = id;
 	this->rxFlag = false;
@@ -50,10 +50,10 @@ Reader::Reader(uint8_t id, const UartInterface* uart, char* rxBuffer, char* ackB
 
 bool Reader::init()
 {
-  if(this->uart != nullptr && this->uart->init != nullptr)
+  if(this->link != nullptr)
   {
-    // Initialise uart hardware & driver layer
-    return this->uart->init((char*) this->rxBuffer, this->bufferLen);
+    // Initialise link hardware & driver layer
+    return this->link->init((char*) this->rxBuffer, this->bufferLen);
   }
   return false;
 }
@@ -320,33 +320,33 @@ uint8_t Reader::rxDelay()
 //-------------------------------------------------------------
 bool Reader::checkUartFrameRx()
 {
-	if(this->uart != nullptr && this->uart->checkFrameRx != nullptr)
+	if(this->link != nullptr)
 	{
-		return this->uart->checkFrameRx();
+		return this->link->checkFrameRx();
 	}
 	return false;
 }
 uint8_t Reader::getUartRxLenAndReset()
 {
-  if(this->uart != nullptr && this->uart->getRxLenAndReset != nullptr)
+  if(this->link != nullptr)
 	{
-		return this->uart->getRxLenAndReset();
+		return this->link->getRxLenAndReset();
 	}
   return 0;
 }
 uint8_t Reader::uartWrite(char* buffer)
 {
-	if(this->uart != nullptr && this->uart->write != nullptr)
+	if(this->link != nullptr)
 	{
-		return this->uart->write(buffer);
+		return this->link->write(buffer);
 	}
 	return 0;
 }
 bool Reader::getUartTxBusy()
 {
-	if(this->uart != nullptr && this->uart->getTxBusy != nullptr)
+	if(this->link != nullptr)
 	{
-		return this->uart->getTxBusy();
+		return this->link->getTxBusy();
 	}
 	return false;
 }

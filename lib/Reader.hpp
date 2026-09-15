@@ -13,7 +13,7 @@
 #include "Writer.hpp"
 #include "Frame.hpp"
 #include "DebugUser.hpp"
-#include "UartInterface.hpp"
+#include "LinkInterface.hpp"
 //#include "Transport.hpp"
 
 #if defined(ENV_CONFIG__SYSTEM_PC)
@@ -39,7 +39,7 @@ private:
 	//const uint8_t TXACKWAIT = 2;
 	uint8_t id;
 	bool rxFlag;
-	const UartInterface* uart;
+	LinkInterface* link;
 	Writer* writer;
 	char* rxBuffer;
 	char* ackBuffer;
@@ -62,7 +62,7 @@ private:
   uint8_t rxDelay();
 
 	//-------------------------------------
-	// Uart Interface (calls through this->uart)
+	// Uart Interface (calls through this->link)
 
 	// Checks uart layer (below) to see if a frame has been received.
 	bool checkUartFrameRx();
@@ -79,10 +79,10 @@ private:
 	readHandler getInstantHandler(char* protocol);
 
 public:
-	// uart: uart layer functions (must outlive the Reader).
-	Reader(uint8_t id, const UartInterface* uart, char* rxBuffer, char* ackBuffer, uint8_t bufferLen,
+	// link: transport below the Reader, e.g. uart or radio (must outlive the Reader).
+	Reader(uint8_t id, LinkInterface* link, char* rxBuffer, char* ackBuffer, uint8_t bufferLen,
 	    Frame* rxFrame, Frame* ackFrame, Writer* writer = nullptr); // , DebugPrint* debugPrint = nullptr
-  // Initialises the uart layer. Returns false if the uart could not be opened.
+  // Initialises the link. Returns false if the link could not be opened.
   bool init();
 	void run();
 	bool registerInstantCallback(char* protocol, readHandler handler);

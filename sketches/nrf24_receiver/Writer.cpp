@@ -19,7 +19,7 @@
 
 using namespace SerLink;
 
-Writer::Writer(uint8_t id, const UartInterface* uart, char* txBuffer, uint8_t bufferLen, Frame* txFrame, Frame* ackRxFrame): id(id), uart(uart), DebugUser()
+Writer::Writer(uint8_t id, LinkInterface* link, char* txBuffer, uint8_t bufferLen, Frame* txFrame, Frame* ackRxFrame): id(id), link(link), DebugUser()
 {
   this->txFlag = false;
   this->ackRxFlag = false;
@@ -201,17 +201,17 @@ uint8_t Writer::rxAckWait()
 
 uint8_t Writer::uartWrite(char* buffer)
 {
-  if(this->uart != nullptr && this->uart->write != nullptr)
+  if(this->link != nullptr)
   {
-    return this->uart->write(buffer);
+    return this->link->write(buffer);
   }
   return 0;
 }
 bool Writer::getUartTxBusy()
 {
-  if(this->uart != nullptr && this->uart->getTxBusy != nullptr)
+  if(this->link != nullptr)
   {
-    return this->uart->getTxBusy();
+    return this->link->getTxBusy();
   }
   return false;
 }

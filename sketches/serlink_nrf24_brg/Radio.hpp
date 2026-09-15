@@ -75,7 +75,10 @@ class Radio : public StateMachine
     // the tx buffer for run() to send. 0 if accepted; 1 if init() has not
     // been called, the previous frame has not been sent yet, or the frame is
     // too long / not '\n' terminated.
-    uint8_t write(char* buffer);
+    uint8_t write(const char* buffer);
+
+    // Returns true while a frame accepted by write() has not been sent yet.
+    bool getTxBusy() { return this->txPending; }
 
     // If a received frame is waiting, copies it (NUL-terminated) into buffer,
     // which must be at least RADIO__FRAME_LEN_MAX long, sets len to its length

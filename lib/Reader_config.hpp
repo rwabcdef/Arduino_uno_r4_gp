@@ -23,5 +23,9 @@
 
 #endif
 //----------------------------------------------------------
+// READER1
+
+#define READER_CONFIG__READER1_ID 2 // READER1 instance id
+//----------------------------------------------------------
 
 #endif /* READER_CONFIG_HPP_ */

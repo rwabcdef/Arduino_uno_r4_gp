@@ -71,7 +71,7 @@ uint8_t Radio::stopListening()
   return 0;
 }
 
-uint8_t Radio::write(char* buffer)
+uint8_t Radio::write(const char* buffer)
 {
   size_t len;
 
