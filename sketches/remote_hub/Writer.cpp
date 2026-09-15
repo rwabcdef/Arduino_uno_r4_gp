@@ -33,6 +33,7 @@ Writer::Writer(uint8_t id, LinkInterface* link, char* txBuffer, uint8_t bufferLe
   #endif
   this->status = Writer::STATUS_IDLE;
   this->flag = 0;
+  this->ackAvailable = false;
 }
 
 void Writer::run()
@@ -117,6 +118,18 @@ void Writer::setAckFrame(Frame* frame)
   //this->debugWrite("writer ack");
 }
 
+bool Writer::getAckFrame(char* protocol, Frame* ackFrame)
+{
+  if(this->ackAvailable &&
+    (0 == strncmp(this->ackRxFrame->protocol, protocol, Frame::LEN_PROTOCOL)))
+  {
+    this->ackAvailable = false;
+    this->ackRxFrame->copy(ackFrame);
+    return true;
+  }
+  return false;
+}
+
 //----------------------------------------------------------------
 // start of state methods
 uint8_t Writer::idle()
@@ -147,8 +160,9 @@ uint8_t Writer::txWait()
   {
     //return IDLE;
 
-    if(this->txFrame->type == Frame::TYPE_UNIDIRECTION)
+    if(this->txFrame->type != Frame::TYPE_TRANSMISSION)
     {
+      // No ack expected (e.g. 'U' or 'B' frame)
       this->status = Writer::STATUS_IDLE;
       return IDLE;
     }
@@ -178,6 +192,7 @@ uint8_t Writer::rxAckWait()
     if(0 == strncmp(this->ackRxFrame->protocol, this->txFrame->protocol, Frame::LEN_PROTOCOL))
     {
       this->status = Writer::STATUS_OK;
+      this->ackAvailable = true; // ackRxFrame is kept for getAckFrame()
       return IDLE;
     }
     else

@@ -41,6 +41,7 @@ private:
   Frame* ackRxFrame;
 
   uint8_t flag;
+  bool ackAvailable; // ackRxFrame holds an ack (for txFrame's protocol) not yet read by getAckFrame()
 
   uint8_t idle();
   uint8_t txWait();
@@ -70,6 +71,10 @@ public:
 
   // Called by a Reader to pass an ack frame to the Writer.
   void setAckFrame(Frame* frame);
+
+  // If an ack for the specified protocol has been received (and not yet
+  // read), copies it into ackFrame, clears it and returns true.
+  bool getAckFrame(char* protocol, Frame* ackFrame);
 
   uint8_t uartWrite(char* buffer);
   bool getUartTxBusy();

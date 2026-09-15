@@ -60,6 +60,18 @@ public:
   // Returns true if the data has been accepted.
   bool sendData(char* data, uint16_t dataLen, bool ack);
 
+  // Gets the whole received frame (type, roll code, data length & data).
+  // Returns true if a received frame is ready to be read from the socket.
+  bool getRxFrame(Frame* frame);
+
+  // Sends a copy of frame (type, roll code, data length & data are kept,
+  // the protocol is set to this socket's). Returns true if accepted.
+  bool sendFrame(Frame* frame);
+
+  // If the ack of a 'T' frame sent by this socket has been received (and not
+  // yet read), copies it into ackFrame and returns true.
+  bool getAckFrame(Frame* ackFrame);
+
   // Returns the send status, and clears it.
   uint8_t getAndClearSendStatus();
 

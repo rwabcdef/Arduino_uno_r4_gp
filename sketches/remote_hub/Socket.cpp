@@ -65,6 +65,47 @@ bool SerLink::Socket::getRxData(char* data, uint16_t* dataLen)
   return false;
 }
 
+bool SerLink::Socket::getRxFrame(Frame* frame)
+{
+  if(this->rxFrame == nullptr)
+  {
+    // This is a write only socket (this->rxFrame == nullptr in order to save memory) - so do nothing
+    return false;
+  }
+
+  if(this->reader->getRxFrameProtocol(this->rxFrame, this->protocol))
+  {
+    this->rxFrame->copy(frame);
+    return true;
+  }
+  return false;
+}
+
+bool SerLink::Socket::sendFrame(Frame* frame)
+{
+  if(this->txFrame == nullptr)
+  {
+    // This is a read only socket (this->txFrame == nullptr in order to save memory) - so do nothing
+    return false;
+  }
+
+  if(!this->active)
+  {
+    // This socket is not acive - so do nothing
+    return false;
+  }
+
+  frame->copy(this->txFrame);
+  this->txFrame->setProtocol(this->protocol);
+  this->txDataFlag = true;
+  return true;
+}
+
+bool SerLink::Socket::getAckFrame(Frame* ackFrame)
+{
+  return this->writer->getAckFrame(this->protocol, ackFrame);
+}
+
 bool SerLink::Socket::getRxEvent(HardMod::Event &event)
 {
   if(this->rxFrame == nullptr)

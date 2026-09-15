@@ -222,9 +222,10 @@ uint8_t Reader::idle()
 			//return IDLE;
 			return ACKDELAY;
 		}
-		else if(this->rxFrame->type == Frame::TYPE_UNIDIRECTION)
+		else if((this->rxFrame->type == Frame::TYPE_UNIDIRECTION) ||
+		    (this->rxFrame->type == Frame::TYPE_RELAY_ACK))
 		{
-		  // Received Frame is unidirectional - so do nothing
+		  // Received Frame is unidirectional (or a relay ack) - so do not send an ack
 
           swTimer_tickReset(&this->startTick);
           sei();

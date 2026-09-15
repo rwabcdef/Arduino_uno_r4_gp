@@ -29,16 +29,18 @@
 //   IRQ  -> not connected
 //
 //----------------------------------------------------------------
-// Led socket (LED01): receives a frame from the uart, and forwards its data
-// (not the header) to ledRadioSocket, which sends it over the radio via
-// writer1 / reader1 / serLinkRadioAdapter, e.g.
+// Led sockets (LED01): relay (SerlinkRelay) between ledSocket (uart) and
+// ledRadioSocket (radio, via writer1 / reader1 / serLinkRadioAdapter), in both
+// directions. Relayed frames keep their roll code, e.g.
 //   PC -> LED01U492002A1          (uart)
-//   radio -> LED01U000002A1       (ledRadioSocket's own roll code)
+//   radio -> LED01U492002A1
 //
-// And in the other direction, data received by ledRadioSocket is sent to the
-// uart by ledSocket, e.g.
-//   radio -> LED01U017002B0
-//   PC <- LED01U000002B0          (ledSocket's own roll code)
+// For a 'T' frame, the far end's ack is returned as a relay ack ('B'), e.g.
+//   PC -> LED01T492002A1          (uart)
+//   PC <- LED01A492900            (ack from this device's reader0)
+//   radio -> LED01T492002A1
+//   radio <- LED01A492900         (ack from the far end)
+//   PC <- LED01B492900            (relay ack)
 //
 //----------------------------------------------------------------
 
@@ -52,6 +54,7 @@
 #include "timer0.h"
 #include "Radio.hpp"
 #include "SerLinkRadioAdapter.hpp"
+#include "SerlinkRelay.hpp"
 #include <string.h>
 
 const uint8_t CE_PIN = 9;
@@ -160,6 +163,13 @@ SerLink::Frame ledRadioSocketTxFrame(ledRadioSocketTxFrameBuffer);
 SerLink::Socket ledRadioSocket(&writer1, &reader1, (char*)"LED01", &ledRadioSocketRxFrame, &ledRadioSocketTxFrame);
 
 //-------------------------------------------------
+// relay (ledSocket <-> ledRadioSocket)
+char relayWorkFrameBuffer[FRAME_BUFF_LEN];
+SerLink::Frame relayWorkFrame(relayWorkFrameBuffer);
+
+SerlinkRelay relay(&relayWorkFrame);
+
+//-------------------------------------------------
 // socket data buffers
 char socketRxData[FRAME_BUFF_LEN];
 char socketTxData[FRAME_BUFF_LEN];
@@ -168,6 +178,7 @@ uint16_t socketRxDataLen;
 void setup() {
   reader0.init(); // initialises the uart
   reader1.init(); // sets serLinkRadioAdapter's rx frame buffer
+  relay.registerPair(&ledSocket, &ledRadioSocket);
   timer0_init();
   radio.init(RADIO_ADDRESS);
   radio.startListening();
@@ -192,18 +203,9 @@ void loop() {
   // received data is not used here.
   debugSocket.getRxData(socketRxData, &socketRxDataLen); // DBG01T156003RPB
 
-  // Serial to radio forwarding: ledSocket's received data ("A1") is sent by ledRadioSocket.
-  if (ledSocket.getRxData(socketRxData, &socketRxDataLen)) { // LED01U492002A1
-    ledRadioSocket.sendData(socketRxData, socketRxDataLen, false);
-  }
-
-  // Radio to serial forwarding: ledRadioSocket's received data is sent by ledSocket.
-  if (ledRadioSocket.getRxData(socketRxData, &socketRxDataLen)) { // LED01U017002B0
-    if (socketRxDataLen > MAX_DATA_LEN) {
-      socketRxDataLen = MAX_DATA_LEN;
-    }
-    ledSocket.sendData(socketRxData, socketRxDataLen, false);
-  }
+  // Relays LED01 frames between ledSocket (uart) and ledRadioSocket (radio).
+  // Must run before the readers' rx flags are cleared below.
+  relay.run();
 
   // Drop received frames that no socket has claimed (e.g. unknown protocol)
   reader0.clearRxFlag();
