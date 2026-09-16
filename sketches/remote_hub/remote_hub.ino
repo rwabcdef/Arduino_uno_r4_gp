@@ -218,6 +218,8 @@ void loop() {
     }
     handleLedData(socketRxData, socketRxDataLen);
     //ledSocket.sendData(socketRxData, socketRxDataLen, false);
+
+    debugSocket.sendData(socketRxData, socketRxDataLen, false);
   }
 
   // Drop received frames that no socket has claimed (e.g. unknown protocol)
