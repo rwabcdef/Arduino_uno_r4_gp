@@ -86,6 +86,12 @@ class Radio : public StateMachine
     // A frame that arrives before the previous one has been read is dropped.
     bool hasRxData(char* buffer, uint8_t* len);
 
+    // Returns true if the nRF24L01 answers on SPI (reads SETUP_AW, which is
+    // 1..3 on a live chip, 0x00 / 0xFF with none). Unlike the other public
+    // methods this talks to the device directly. False until run() has made
+    // its first attempt to bring the device up, as SPI is not started before.
+    bool isChipConnected();
+
   private:
     enum State : uint8_t
     {

@@ -107,6 +107,16 @@ bool Radio::hasRxData(char* buffer, uint8_t* len)
   return true;
 }
 
+bool Radio::isChipConnected()
+{
+  if(!this->initAttempted)
+  {
+    return false;   // nrf.begin() not called yet, so SPI is not set up
+  }
+
+  return this->nrf.isChipConnected();
+}
+
 //----------------------------------------------------------------
 // start of state methods
 

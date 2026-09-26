@@ -182,6 +182,16 @@ void setup() {
   timer0_init();
   radio.init(RADIO_ADDRESS);
   radio.startListening();
+  delay(1000);
+
+  // One run() brings the nRF24L01 up (normally done from loop()), so the chip
+  // can be checked here. If it fails, run() keeps retrying from loop().
+  radio.run();
+  if (radio.isChipConnected()) {
+    debugSocket.sendData((char*)"start radio ok", 14, false);
+  } else {
+    debugSocket.sendData((char*)"start radio fail", 16, false);
+  }
 }
 
 void loop() {
