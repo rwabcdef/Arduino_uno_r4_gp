@@ -25,6 +25,22 @@ alongside its `.ino` file in the same folder.
   payload received.
 - `nrf24_transmitter` — sends a "count X" packet over an nRF24L01 module every
   3 seconds.
+- `serlink_nrf24_brg` — a SerLink bridge between the serial port and the radio.
+- `remote_hub` — the ControlHubAA26 Remote Hub: two buttons, two LEDs and a pot,
+  talking SerLink to the control hub over the radio. Button 1 starts/stops a motor
+  run, button 2 toggles its direction, the pot sets the speed of runs started here;
+  LED A shows the hub's mode, LED B the selected direction. See the header of
+  `remote_hub.ino` for the frames.
+
+### Remote hub user IO wiring
+
+| Part      | Arduino Uno R4 Minima pin | Notes                                     |
+| --------- | ------------------------- | ----------------------------------------- |
+| Button 1  | D2                        | to GND; internal pull-up, active low      |
+| Button 2  | D3                        | to GND; internal pull-up, active low      |
+| LED A     | D8                        | via ~330R to the anode, cathode to GND    |
+| LED B     | D4                        | via ~330R to the anode, cathode to GND    |
+| Pot       | A0 (wiper)                | ends to 5V and GND                        |
 
 ### nRF24L01 wiring
 

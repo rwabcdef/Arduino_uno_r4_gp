@@ -17,6 +17,9 @@ Radio::Radio(uint8_t cePin, uint8_t csnPin)
   this->initAttempted = false;
   this->initAttemptMs = 0;
   this->txPending     = false;
+  this->txResult      = TX_RESULT_NONE;
+  this->hungConfig     = 0;
+  this->hungFifoStatus = 0;
   this->rxReady       = false;
   this->rxLen         = 0;
   this->rxSynced      = false;
@@ -117,6 +120,19 @@ bool Radio::isChipConnected()
   return this->nrf.isChipConnected();
 }
 
+void Radio::getHungRegisters(uint8_t* config, uint8_t* fifoStatus)
+{
+  *config     = this->hungConfig;
+  *fifoStatus = this->hungFifoStatus;
+}
+
+uint8_t Radio::getAndClearTxResult()
+{
+  uint8_t result = this->txResult;
+  this->txResult = TX_RESULT_NONE;
+  return result;
+}
+
 //----------------------------------------------------------------
 // start of state methods
 
@@ -151,9 +167,9 @@ uint8_t Radio::initDevice()
 // Powered up in standby, not receiving.
 uint8_t Radio::idle()
 {
-  if(this->txPending)
+  if(this->txPending && !this->tx(false))
   {
-    this->tx(false);
+    return STATE_INIT;   // device stopped responding: bring it up again
   }
 
   if(this->listen)
@@ -168,9 +184,9 @@ uint8_t Radio::idle()
 // Listening.
 uint8_t Radio::rx()
 {
-  if(this->txPending)
+  if(this->txPending && !this->tx(true))
   {
-    this->tx(true);
+    return STATE_INIT;   // device stopped responding: bring it up again
   }
 
   if(!this->listen)
@@ -188,7 +204,8 @@ uint8_t Radio::rx()
 //----------------------------------------------------------------
 
 // Sends txBuffer split into packets. Blocks while the packets are sent.
-void Radio::tx(bool listening)
+// Returns false if the device stopped responding (it then needs re-init).
+bool Radio::tx(bool listening)
 {
   uint8_t packet[PACKET_LEN];
   uint8_t frameLen = (uint8_t)strnlen(this->txBuffer, RADIO__FRAME_LEN_MAX);
@@ -215,7 +232,14 @@ void Radio::tx(bool listening)
     packet[0] = (offset == 0) ? PACKET_FLAG_START : 0;
     memcpy(&packet[PACKET_HEADER_LEN], &this->txBuffer[offset], chunkLen);
 
-    if(!this->nrf.write(packet, PACKET_LEN))
+    uint8_t result = this->writePacket(packet);
+    this->txResult = result;
+    if(result == TX_RESULT_HUNG)
+    {
+      this->txPending = false;   // frame is lost
+      return false;
+    }
+    if(result != TX_RESULT_OK)
     {
       break;   // not acked: the rest of the frame is useless without this part
     }
@@ -230,6 +254,45 @@ void Radio::tx(bool listening)
     this->nrf.startListening();
     this->drainRxFifo();
   }
+  return true;
+}
+
+/* Sends one packet and waits for it to be acked or to fail (max retries).
+   RF24::write() is not used: in RF24 1.6.2 its FAILURE_HANDLING recovery
+   (errHandler(bool*) tests the pointer, not the flag) retries forever if the
+   device never reports TX done / fail, e.g. after it has been reset by a dip
+   in its supply while transmitting - which locks up the whole main loop. */
+uint8_t Radio::writePacket(const uint8_t* packet)
+{
+  this->nrf.startWrite(packet, PACKET_LEN, false);   // CE pulse: send the one packet in the FIFO
+
+  uint32_t startMs = millis();
+  uint8_t status;
+  while(((status = this->nrf.update()) & (RF24_TX_DS | RF24_TX_DF)) == 0)
+  {
+    if((millis() - startMs) > PACKET_TX_TIMEOUT_MS)
+    {
+      /* Register dump for diagnostics (encodeRadioDetails() is the only
+         public register read): [0] CONFIG, [35] FIFO_STATUS. */
+      uint8_t regs[43];
+      this->nrf.encodeRadioDetails(regs);
+      this->hungConfig     = regs[0];
+      this->hungFifoStatus = regs[35];
+
+      this->nrf.flush_tx();
+      this->nrf.clearStatusFlags(RF24_TX_DS | RF24_TX_DF);
+      return TX_RESULT_HUNG;
+    }
+  }
+
+  this->nrf.clearStatusFlags(RF24_TX_DS | RF24_TX_DF);
+
+  if(status & RF24_TX_DF)
+  {
+    this->nrf.flush_tx();   // still in the FIFO after max retries
+    return TX_RESULT_NO_ACK;
+  }
+  return TX_RESULT_OK;
 }
 
 void Radio::drainRxFifo()
