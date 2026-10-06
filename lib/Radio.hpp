@@ -92,6 +92,20 @@ class Radio : public StateMachine
     // its first attempt to bring the device up, as SPI is not started before.
     bool isChipConnected();
 
+    // Result of the last frame sent by run() (see getAndClearTxResult())
+    static const uint8_t TX_RESULT_NONE   = 0;  // no frame sent since the last call
+    static const uint8_t TX_RESULT_OK     = 1;  // every packet acked by the far end
+    static const uint8_t TX_RESULT_NO_ACK = 2;  // max retries: sent, but not acked
+    static const uint8_t TX_RESULT_HUNG   = 3;  // device never finished: re-initialised
+
+    // Returns the result of the last frame sent, then clears it to
+    // TX_RESULT_NONE. For diagnostics.
+    uint8_t getAndClearTxResult();
+
+    // The device's CONFIG and FIFO_STATUS registers, read when the last
+    // TX_RESULT_HUNG happened. For diagnostics.
+    void getHungRegisters(uint8_t* config, uint8_t* fifoStatus);
+
   private:
     enum State : uint8_t
     {
@@ -107,6 +121,9 @@ class Radio : public StateMachine
     static const uint8_t  RX_FIFO_DEPTH     = 3;
     static const uint8_t  CHANNEL           = 76;
     static const uint32_t INIT_RETRY_MS     = 1000;
+    // Longest one packet can take, including all auto-retries (~25ms with
+    // RF24's default 15 retries at 1.5ms), with margin.
+    static const uint32_t PACKET_TX_TIMEOUT_MS = 50;
 
     RF24     nrf;
     uint8_t  address[ADDRESS_LEN];
@@ -117,6 +134,9 @@ class Radio : public StateMachine
 
     char     txBuffer[RADIO__FRAME_LEN_MAX];
     bool     txPending;         // txBuffer holds a frame not yet sent
+    uint8_t  txResult;          // TX_RESULT_ of the last frame sent
+    uint8_t  hungConfig;        // registers read at the last TX_RESULT_HUNG
+    uint8_t  hungFifoStatus;
 
     char     rxFrame[RADIO__FRAME_LEN_MAX];   // frame being reassembled from packets
     uint8_t  rxFrameLen;
@@ -130,7 +150,8 @@ class Radio : public StateMachine
     uint8_t idle();
     uint8_t rx();
 
-    void    tx(bool listening);
+    bool    tx(bool listening);
+    uint8_t writePacket(const uint8_t* packet);
     void    drainRxFifo();
     void    reassemble(const uint8_t* packet);
     void    resetRxFrame();

@@ -33,7 +33,8 @@
 // ledRadioSocket (radio, via writer1 / reader1 / serLinkRadioAdapter), in both
 // directions. Relayed frames keep their roll code, e.g.
 //   PC -> LED01U492002A1          (uart)
-//   radio -> LED01U492002A1
+//   radio -> LED01U492002
+
 //
 // For a 'T' frame, the far end's ack is returned as a relay ack ('B'), e.g.
 //   PC -> LED01T492002A1          (uart)
@@ -175,6 +176,14 @@ char socketRxData[FRAME_BUFF_LEN];
 char socketTxData[FRAME_BUFF_LEN];
 uint16_t socketRxDataLen;
 
+//-------------------------------------------------
+// periodic count, sent on the debug socket, e.g.
+//   PC <- DBG01U000006val 12
+const unsigned long COUNT_PERIOD_MS = 2000;
+unsigned long countLastMs = 0;
+uint32_t count = 0;
+char countTxData[FRAME_BUFF_LEN];
+
 void setup() {
   reader0.init(); // initialises the uart
   reader1.init(); // sets serLinkRadioAdapter's rx frame buffer
@@ -212,6 +221,28 @@ void loop() {
   // The debug socket replies from its instant handler (in the ack), so the
   // received data is not used here.
   debugSocket.getRxData(socketRxData, &socketRxDataLen); // DBG01T156003RPB
+
+  if (millis() - countLastMs >= COUNT_PERIOD_MS) {
+    countLastMs += COUNT_PERIOD_MS;
+    int len = snprintf(countTxData, sizeof(countTxData), "val %d", (int)count++);
+    debugSocket.sendData(countTxData, len, false);
+  }
+
+  // Radio diagnostics: result of each frame sent over the radio, e.g.
+  //   PC <- DBG01U000005tx ok
+  switch (radio.getAndClearTxResult()) {
+    case Radio::TX_RESULT_OK:     debugSocket.sendData((char*)"tx ok", 5, false); break;
+    case Radio::TX_RESULT_NO_ACK: debugSocket.sendData((char*)"tx noack", 8, false); break;
+    case Radio::TX_RESULT_HUNG: {
+      // e.g. "h c0E f11": nRF24 CONFIG and FIFO_STATUS registers when it hung
+      uint8_t config, fifoStatus;
+      radio.getHungRegisters(&config, &fifoStatus);
+      int len = snprintf(socketTxData, sizeof(socketTxData), "h c%02X f%02X", config, fifoStatus);
+      debugSocket.sendData(socketTxData, len, false);
+      break;
+    }
+    default: break;
+  }
 
   // Relays LED01 frames between ledSocket (uart) and ledRadioSocket (radio).
   // Must run before the readers' rx flags are cleared below.
