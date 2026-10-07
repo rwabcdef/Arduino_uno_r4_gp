@@ -36,9 +36,9 @@ alongside its `.ino` file in the same folder.
 
 | Part      | Arduino Uno R4 Minima pin | Notes                                     |
 | --------- | ------------------------- | ----------------------------------------- |
-| Button 1  | D2                        | to GND; internal pull-up, active low      |
-| Button 2  | D3                        | to GND; internal pull-up, active low      |
-| LED A     | D8                        | via ~330R to the anode, cathode to GND    |
+| Button 1  | D7                        | to GND; internal pull-up, active low      |
+| Button 2  | D6                        | to GND; internal pull-up, active low      |
+| LED A     | D5                        | via ~330R to the anode, cathode to GND    |
 | LED B     | D4                        | via ~330R to the anode, cathode to GND    |
 | Pot       | A0 (wiper)                | ends to 5V and GND                        |
 

@@ -25,7 +25,9 @@
 //                          BTN01T<rrr>0021P   button 1 pressed
 //                          BTN01T<rrr>0022P   button 2 pressed
 //   POT01  -> hub, 'U'   the pot, PotEvent format (pot.hpp), sent on a
-//                        change of POT_MIN_CHANGE or more:
+//                        change of POT_MIN_CHANGE or more, and again every
+//                        POT_REFRESH_MS, so a hub that has restarted (and
+//                        forgotten the pot) learns it without a turn:
 //                          POT01U<rrr>004P050
 //   HBT01  -> hub, 'U'   heartbeat, every HEARTBEAT_PERIOD_MS:
 //                          HBT01U<rrr>001H
@@ -60,9 +62,9 @@
 //   IRQ  -> not connected
 //
 // User IO:
-//   button 1  D2 -> push button -> GND  (internal pull-up, active low)
-//   button 2  D3 -> push button -> GND  (internal pull-up, active low)
-//   LED A     D8 -> resistor (e.g. 330R) -> LED anode, cathode -> GND
+//   button 1  D7 -> push button -> GND  (internal pull-up, active low)
+//   button 2  D6 -> push button -> GND  (internal pull-up, active low)
+//   LED A     D5 -> resistor (e.g. 330R) -> LED anode, cathode -> GND
 //   LED B     D4 -> resistor (e.g. 330R) -> LED anode, cathode -> GND
 //   pot       wiper -> A0, ends -> 5V and GND
 //
@@ -91,8 +93,8 @@ const uint8_t CE_PIN = 9;
 const uint8_t CSN_PIN = 10;
 const byte RADIO_ADDRESS[6] = "00001";
 
-const uint8_t BUTTON1_PIN = 2;   // D2, port D pin 2
-const uint8_t BUTTON2_PIN = 3;   // D3, port D pin 3
+const uint8_t BUTTON1_PIN = 7;   // D7, port D pin 7 (RA4M1 P107)
+const uint8_t BUTTON2_PIN = 6;   // D6, port D pin 6 (RA4M1 P106)
 
 // The hub's LED01 ids - the same characters it sends.
 const char LED_RUN_ID = 'A';
@@ -101,6 +103,7 @@ const char LED_DIRECTION_ID = 'B';
 const uint16_t HEARTBEAT_PERIOD_MS = 500;   // the hub times out at 2000
 const uint16_t LINK_LOST_MS = 3000;         // the hub refreshes LED01 every 1000
 const uint8_t POT_MIN_CHANGE = 2;           // percent - hysteresis against ADC jitter
+const uint16_t POT_REFRESH_MS = 1000;       // re-send the pot even when still
 
 // Frame::toString() clears one byte past the frame's '\n', so every frame
 // buffer gets one extra byte.
@@ -206,7 +209,7 @@ HardMod::Std::Button button1('1', GPIO_REG__PORTD, BUTTON1_PIN, false);
 HardMod::Std::Button button2('2', GPIO_REG__PORTD, BUTTON2_PIN, false);
 HardMod::Std::ButtonEvent buttonEvent;
 
-HardMod::Std::Led ledRun(LED_RUN_ID, GPIO_REG__PORTB, 0);          // D8
+HardMod::Std::Led ledRun(LED_RUN_ID, GPIO_REG__PORTD, 5);          // D5
 HardMod::Std::Led ledDirection(LED_DIRECTION_ID, GPIO_REG__PORTD, 4); // D4
 HardMod::Std::LedEvent ledEvent;   // decodes received LED01 data
 
@@ -226,6 +229,7 @@ uint16_t heartbeatTick;
 uint16_t lastLedTick;      // when LED01 was last heard from the hub
 bool linkLost = true;      // nothing heard yet
 int16_t potLastSent = -1;  // -1: nothing sent yet
+uint16_t potRefreshTick;
 
 void setup() {
   // Over the constructors' pinMode(INPUT): active low buttons, so pull up.
@@ -243,6 +247,7 @@ void setup() {
   radio.startListening();
 
   swTimer_tickReset(&heartbeatTick);
+  swTimer_tickReset(&potRefreshTick);
   swTimer_tickReset(&lastLedTick);
   showLinkLost();
 }
@@ -265,7 +270,22 @@ void loop() {
       potLastSent = percent;
       uint8_t len = potEvent.serialise(socketTxData);      // e.g. "P050"
       potSocket.sendData(socketTxData, len, false);
+      swTimer_tickReset(&potRefreshTick);
     }
+  }
+
+  // Pot refresh. Pot only reports a change, and its first reading is
+  // compared against zero, so a pot left at 0 from power up never produces
+  // an event - by the first refresh (two 250 ms readings in) no event
+  // means 0.
+  if (swTimer_tickCheckTimeout(&potRefreshTick, POT_REFRESH_MS)) {
+    if (potLastSent < 0) {
+      potLastSent = 0;
+    }
+    potEvent.setId(pot.getId());   // potEvent has no id until its first getEvent()
+    potEvent.setPercent((uint8_t)potLastSent);
+    uint8_t len = potEvent.serialise(socketTxData);
+    potSocket.sendData(socketTxData, len, false);
   }
 
   if (swTimer_tickCheckTimeout(&heartbeatTick, HEARTBEAT_PERIOD_MS)) {

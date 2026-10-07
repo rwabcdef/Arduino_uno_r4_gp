@@ -22,7 +22,7 @@ the remote started if the radio link drops; the hub's LED01 refresh (every secon
 the remote show the link as lost.
 
 `README.md` has the nRF24L01 wiring. Each sketch's `.ino` header comment documents its
-sockets, frame examples and extra wiring (e.g. LED A on D8, since D13 is the radio's SCK).
+sockets, frame examples and extra wiring (e.g. the LEDs are off-board, since D13 is the radio's SCK).
 
 ## Layout, and the replication rule
 
